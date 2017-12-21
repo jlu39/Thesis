@@ -1,0 +1,955 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%IIT Sample THESIS File,   Version 3, Updated by Babak Hamidian on 11/18/2003%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% File: sample3.tex                                   %
+% IIT Sample LaTeX File                               %
+% by Ozlem Kalinli on 05/30/2003                      %
+% Revised by Babak Hamidian on 11/18/2003             %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                     %
+% This is a sample thesis document created using      %
+% iitthesis.cls style file. The PDF output is also    %
+% available for your reference. In this file, it has  %
+% been illustrated how to make table of contents,     %
+% list of tables, list of figures, list of symbols,   %
+% bibliography, equations, enumerations, etc.         %
+% You can find detailed instructions                  %
+% for using the style file in Help.doc,               %
+% TableHelp.doc, FigureHelp.doc, and                  %
+% Bibliography.doc files.                             %
+%                                                     %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Note: The texts that are used in this sample3.tex   %
+% file are irrelevant. They are just used to show     %
+% you the style created by iitthesis style file.      %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass{iitthesis}
+
+\usepackage[dvips]{graphicx}    
+\usepackage{rotating}          
+\usepackage{listings}  
+\usepackage{epsfig}
+\usepackage{amsmath}
+\usepackage{subfigure} 
+\usepackage{mathtools,booktabs,comment}
+\usepackage{xspace,array,pifont}
+\usepackage{lipsum}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage{amsopn}
+\usepackage{algorithmic}
+\usepackage{amsthm}
+\usepackage{color}
+\usepackage{changepage}
+\usepackage{multirow}
+\usepackage{threeparttable}
+\input FJHDef.tex
+
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{prop}[theorem]{Proposition}
+
+\DeclareMathOperator{\relinteg}{\texttt{\textup{relIntegral}}}
+\DeclareMathOperator{\newinteg}{\texttt{\textup{newIntegral}}}
+\DeclareMathOperator{\goodinteg}{\texttt{\textup{int}}}
+\DeclareMathOperator{\flawinteg}{\texttt{\textup{flawint}}}
+\DeclareMathOperator{\ballinteg}{\texttt{\textup{ballint}}}
+\DeclareMathOperator{\Var}{Var}
+\DeclareMathOperator{\tol}{tol}
+\newcommand{\hVar}{\widetilde{\Var}}
+\DeclareMathOperator{\err}{err}
+\DeclareMathOperator{\size}{size}
+\newcommand{\oerr}{\overline{\err}}
+\newcommand{\herr}{\widehat{\err}}
+\newcommand{\terr}{\widetilde{\err}}
+\newcommand{\oV}{\overline{V}}
+\DeclareMathOperator{\tri}{peak}
+\DeclareMathOperator{\twopk}{twopk}
+\newcommand{\datasites}{\{x_i\}_{i=0}^n}
+\newcommand{\hcut}{\fh}
+\newcommand{\abstol}{\varepsilon_{\textrm{a}}}
+\newcommand{\reltol}{\varepsilon_{\textrm{r}}}
+\newcommand{\Fig}{Figure\xspace}
+\newcommand{\Sect}{Section\xspace}
+
+
+
+\begin{document}
+
+\title{Adaptive Quadrature\\
+  With a General Error Criterion}
+\author{Jiazhen Lu}
+\degree{Master of Science}
+\dept{Applied Mathematics}
+\date{December 2017}
+%\copyrightnoticetrue      
+\maketitle                
+
+
+\prelimpages         
+
+
+\begin{acknowledgement}    
+\par  This dissertation could not have been written without Dr.\  Fred Hickernell who not only served as my supervisor but also encouraged and challenged me throughout my academic program. I deeply appreciate his patience and help. Moreover, I would like to acknowledge with gratitude, the support and love of my family - my parents, my son and my husband. 
+\end{acknowledgement}
+
+
+% Table of Contents
+\tableofcontents
+\clearpage
+
+% List of Tables
+\listoftables
+
+\clearpage
+
+%List of Figures
+\listoffigures
+
+\clearpage
+
+
+
+
+
+
+%%% Abstract %%%
+\begin{abstract}           % abstract environment, this is optional
+
+Numerical algorithms are required when the solutions to mathematical problems cannot be expressed analytically. Adaptive algorithms expend the right amount of computational effort to meet the error tolerance--easy problems require less effort and hard problems require more effort. Here we introduce a new adaptive trapezoidal rule algorithm to satisfy a general error criterion, which includes both absolute and relative error tolerances. Then we derive the computational cost of the new algorithm and the complexity of this problem.
+% or \input{abstract.tex}  %you need a separate abstract.tex file to include it.
+\end{abstract}
+
+
+\textpages     % Settings of text-pages are done with \textpages command
+
+% Chapters are created with \Chapter{title} command
+\Chapter{INTRODUCTION}
+
+There are many definite integrals that cannot be evaluated by paper and pencil. That is why we need numerical algorithms. There is software for such problems and some algorithms are \emph{adaptive}, meaning that they automatically expend the right amount of computational effort needed to provide an approximate solution with an error no greater than the error tolerance. At the core of every adaptive algorithm is an estimate of the error of the numerical approximation based on the computations already performed.  Unfortunately, these error estimates either require too much information from the user or are based on heuristics and not guaranteed. 
+
+There is a popular function, \texttt{integral}, in Matlab\cite{matlab}, which is a commonly used adaptive quadrature algorithm. It is based on adaptive Gaussian quadrature. The algorithm works recursively on subintervals of the original interval [a,b]. If the values obtained from the 7-point Gauss formula and the Kronrod extension for a total of 15 samples agree to within a specified tolerance, then an extrapolation taken from the two values is accepted as the value for the integral over the subinterval. If not, the algorithm is recursively applied to the two halves of the subinterval. Unfortunately, there is no theoretical proof that this error estimate is valid.
+
+Similarly, there is \emph{chebfun}, whose basis is Chebyshev polynomial interpolation. Chebfun has extensive capabilities for solving problems with linear and nonlinear differential and integral operators, and also includes continuous analogs of linear algebra notions like QR and singular value decomposition. However, there is still no proof of why it is guaranteed to provide the right answer.
+
+
+Recently, a \emph{reliable} adaptive algorithm $\relinteg$ was developed and implemented for approximating
+\begin{align*}
+I(f) = \int_a^b f(x) \, \dif x.
+\end{align*} It satisfies an absolute error criterion with certainty for integrands lying in the well-chosen cone, $\cc$ : 
+\begin{align}
+\abs{I(f) - \relinteg(f,a,b,\abstol)} \le \abstol  \  \   \forall f \in \cc,\ a, b \in \reals, \ a < b, \ 0 < \abstol. 
+\end{align} 
+Our goal is to extend this algorithm to satisfy a more general error criterion, i.e, to construct an approximate solution, which satisfies
+\begin{multline}\label{tol}
+\abs{I(f) - \newinteg(f,a,b,\abstol,\reltol)} \le \max \big( \abstol,\reltol \abs{I(f)} \big), \\ 
+ \forall f \in \cc,\ a, b \in \reals, \ a < b, \ 0 < \abstol,\ 0 \le \reltol \le 1, 
+\end{multline}
+
+Our algorithm will be introduced in Chapter 2. Then we will provide the computational cost of this algorithm in Chapter 3. In Chapter 4, we will discuss the complexity of this problem. There will be some examples in the following chapter. We conclude with a summary and some problems for further research. 
+
+
+
+ 
+\Chapter{Algorithm}
+\Section{Trapezoidal Rule and Its Error Bound}
+
+Trapezoidal rule $T_n$ approximates an integral by the sum of the areas of $n$ trapezoids whose heights are function values:
+\begin{multline} \label{trapruledef}
+T_n(f) := \frac{b-a}{2n} [ f(t_0) + 2 f(t_1) + \cdots  + 2 f(t_{n-1}) + f(t_n)], \\
+t_i=a+\frac{i(b-a)}{n}, \ i=0, \ldots, n, \ n \in \naturals := \{1, 2, \ldots \}.
+\end{multline}
+This is also the integral of the piecewise linear spline approximation to the integrand. Under mild smoothness conditions on $f$ we know that $T_n(f) \to \int_a^b f(x) \, \dif x$ as $n \to \infty$. We would like to turn $T_n$ into an algorithm that chooses $n$ to ensure that the trapezoidal rule error is small enough.  
+Upper bounds on the trapezoidal rule error assume that the integrand possesses some smoothness.  For any function $f:[a,b]\to \reals$, let $f'(x^{-})$ and $f'(x^{+})$ denote the one-sided derivatives of $f$ at $x$.  Furthermore, let $f'(x):=f'(x^{+})$ for $a \le x < b$ and $f'(b):=f(b^{-})$. This makes $f'$ well-defined even when it has jump discountinuities.  All integrands considered in this article have derivatives with bounded variation, i.e., they lie in the linear space
+\[
+\cv:=\{f : \Var(f')<\infty \}.
+\]
+
+Let an \emph{$n$-partition} of $[a,b]$, denoted $\vx$, be defined as an $(n+1)$-vector whose elements are ordered and include the endpoints of the interval,  $a=:x_0 \le x_1 \le \cdots \le x_{n-1} \le x_{n}:=b$.  For any such partition define
+\begin{equation} \label{tVdef}
+\hV(f',\vx,\vz) : = \sum_{i=2}^{n-1} \abs{z_{i} - z_{i-1}}, \qquad
+\text{where } z_{i} \text{ is between } f'(x^{-}) \text{and } f'(x^{+}).
+\end{equation}
+Then the variation of $f'$ may be written as 
+\begin{multline} \label{vardef}
+\Var(f')
+= \sup  \{ \hV(f',\vx,\vz) : z_{i} \text{ is between } f'(x^{-}) \text{and } f'(x^{+}),  \\ 
+\vx \text{ is an $n$-partition and } \ n \in \naturals \}.
+\end{multline}
+
+An example of a function in $\cv$ whose first derivative is  discontinuous, but has finite variation, is the triangle-shaped function  $\tri(\cdot;t,h)$, which is used later in our error analysis.  For $a \le t < t+2h \le b$ let 
+\begin{subequations} \label{trifundef}
+\begin{gather}
+\tri(x;t,h):= \begin{cases} h -\abs{x-t-h},  & t \le x < t+2h  \\
+0, & a \le x < t \text{ or } t+2h \le x \le b,
+\end{cases} \\
+\tri'(x;t,h) = \begin{cases} 
+1, & t \le x < t+h, \\
+-1, & t+h \le x < t+2h, \\
+0, & a \le x < t \text{ or } t+2h \le x \le b, 
+\end{cases} \\
+\label{trifunVar}
+\Var(\tri'(\cdot;t,h)) \le 4 \text{ with equality if $a < t  < t+2h < b$}, \\
+\label{trifuninteg}
+\int_a^b \tri(x;t,h) \, \dif x = h^2.
+\end{gather}
+\end{subequations}
+
+The true error of the trapezoidal rule,
+\begin{align}
+\err(f,n):= \abs{\int_a^b f(x) \, \dif x - T_n(f)},
+\end{align}
+is rarely known in practice, but there exists a rigorous upper bound on the error of the form 
+\begin{align} \label{traperrbd}
+\err(f,n) \le \frac{(b-a)^2\Var(f')}{8n^2} =:\oerr(f,n)  \qquad n \in \naturals.
+\end{align}
+An error bound involving the stronger norm $\sup_{x \in [a,b]} \abs{f''(x)}$ may be more common in the literature. The trapezoidal rule gives the exact answer for linear integrands. Error bound  \eqref{traperrbd}  reflects this fact.
+
+
+\Section{Guaranteed, Adaptive Trapezoidal Algorithm for Absolute Error Tolerance, $\relinteg$}\label{Algorithm}
+
+Since $\err(f,n)$ can be bounded in terms of $\Var(f')$, our challenge becomes to how to estimate $\Var(f')$ using given data. Hickernell, Razo, and Yun give us an idea \cite{Fred}. If an upper bound on $\Var(f')$ is available or can be correctly bounded, we can determine how large $n$ must be to satisfy the error tolerance by the error bound \eqref{traperrbd}.
+
+
+Given any partition, $\datasites$, define an approximation to $\Var(f')$ as follows:
+\begin{multline} \label{tVdef}
+\hV(f',\datasites,\{\Delta_{i}\}_{i=1}^{n-1}) : = \sum_{i=2}^{n-1} \abs{\Delta_{i} - \Delta_{i-1}}, \\
+\text{where } \Delta_{i} \text{ is between } f'(x_i^-) \text{ and } f'(x_i^+).
+\end{multline}
+Note that $\hV$ does not involve the values of $f'$ at $x_0=a$ or $x_n=b$.  Also note that by definition the approximation is actually a lower bound:
+\begin{equation} \label{hVlowerbd}
+\hV(f',\datasites,\{\Delta_{i}\}_{i=1}^{n-1}) \le \Var(f') \quad \forall f \in \cv, \ \datasites, \{\Delta_{i}\}_{i=1}^{n-1}, \ n \in \naturals.
+\end{equation}
+The algorithm $\relinteg$ will be guaranteed to work for the cone of integrands for which $\hV(f',\datasites,\{\Delta_{i}\}_{i=1}^{n-1})$ does not underestimate $\Var(f')$ by  much:
+\begin{multline} \label{conedef}
+\cc := \{ f \in \cv : \Var(f') \le \fC(\size(\datasites)) \hV(f',\datasites,\{\Delta_{i}\}_{i=1}^{n-1}) \text{ for all } \\
+\text{choices of }  n \in \naturals, \ \{\Delta_{i}\}_{i=1}^{n-1}, \text{ and }\datasites \text{ with } \size(\datasites) < \hcut \}.
+\end{multline}
+The cut-off value $\hcut \in (0, b-a]$ and inflation factor $\fC:[0,\hcut) \to [1,\infty)$ define the cone.  The choice of $\fC$ is flexible, but it must be non-decreasing.  One possibility is $\fC(h):=\fC(0) \hcut/(\hcut-h)$.
+
+The cone $\cc$ is defined to rule out sufficiently spiky functions because $f'$ is not allowed to change much over a small distance if $f \in \cc$.  If a function looks like a line on a sufficiently fine mesh, i.e., if $f'(x_i^-)=f'(x_i^+)=\beta$ for $i=1, \ldots, n-1$ for some real $\beta$ and some partition $\datasites$ with $\size(\datasites) \le \hcut$, then $f$ must be the linear function $f(x)= f(a) + \beta(x-a)$.  While the triangular peak function $\tri(\cdot;t,h)$ lies inside $\cc$ for $h \ge \hcut$ and $t \in [a+\hcut,b-3\hcut]$, it lies outside $\cc$ for $h < \hcut/2$.
+
+The definition of $\cc$ does not rule out all functions with narrow spikes.  The following double peaked function
+%---depicted in Fig.\ \cref{trianglepeakfig}(b)---%
+always lies in $\cc$:
+\begin{subequations} \label{twopkdef}
+\begin{multline}
+\twopk(x;t,h,\pm) := \tri(x,0,\hcut) \pm \frac{3[\fC(h)-1]}{4}\tri(x,t,h), \\\
+ \qquad \qquad a+3\hcut \le t \le b-3h, \ 0\le h < \hcut,
+\end{multline}
+\begin{equation}
+\Var(\twopk'(x;t,h,\pm)) = 3 +  \frac{3[\fC(h)-1]}{4} \times 4 = 3 \fC(h).
+\end{equation}
+%\int_a^b \twopk(x;t,h,\pm)  \, \dif x = \frac{\hcut^2}{2} \pm \frac{3[\fC(h)-1]h^2}{8}, \\
+From this definition it follows that
+\begin{align}
+\nonumber
+\MoveEqLeft{\fC(\size(\datasites)) \hV(\twopk'(x;t,h,\pm),\datasites,\{\Delta_{i}\}_{i=1}^{n-1})} \\
+\nonumber
+&\ge  \begin{cases} 
+\fC(0) \Var(\twopk'(x;t,h,\pm)),  & 0 \le \size(\datasites) < h, \\
+\fC(h) \Var(\tri'(x;0,\hcut)) =  3 \fC(h) , & h \le \size(\datasites) < \hcut,
+\end{cases} \\
+\label{twopkincone}
+&\ge \Var(\twopk'(x;t,h,\pm)), \qquad 0 \le \size(\datasites) < \hcut.
+\end{align}
+\end{subequations}
+Although $\twopk(\cdot;t,h,\pm)$ may have a peak of arbitrarily small width half-width, $h$, the height of this peak is small enough so that  $\twopk(\cdot;t,h,\pm)$ still lies in $\cc$ by \eqref{twopkincone}.
+
+We cannot use $\hV(f',\datasites,\{\Delta_{i}\}_{i=1}^{n-1})$ to approximate $\Var(f')$ because it depends on values of $f'$, not values of $f$.  However, $\hV(f',\datasites,\{\Delta_{i}\}_{i=1}^{n-1})$ is closely related to the following approximation to $\Var(f')$, which is the total variation of the derivative of the linear spline approximation to $f$:
+\begin{align*}
+\tV_n(f) & : = \sum_{i=1}^{n-1} \abs{ \frac{f(t_{i+1})-f(t_{i})}{t_{i+1}-t_{i}} - \frac{f(t_i)-f(t_{i-1})}{t_i-t_{i-1}}} \\
+& = \frac{n}{b-a}\sum_{i=1}^{n-1} \abs{ f(t_{i+1})-2f(t_{i})+f(t_{i-1})}, \\
+& \hspace{4cm} t_i= a + \frac{i(b-a)}{n},\ i=0, \ldots, n, \ n \in \naturals.
+\end{align*}
+
+For all $f \in \cc$ it follows that
+\begin{align}\label{lemma}
+\tV_n(f) \le \Var(f') \le \fC(2(b-a)/n) \tV_n(f)
+\end{align}
+for $n>2(b-a)/\hcut$.
+ 
+Algorithm $\relinteg$ computes $\tV_{n_j}(f)$ for an increasing sequence of integers $n_1, n_2, \ldots$ with $n_1 > 2(b-a)/\hcut$.  Because the nodes used in the algorithm are nested, it follows that $\tV_{n_j}(f)$, $j \in \naturals$ is a non-decreasing lower bound on $\Var(f')$.  By  \eqref{lemma} we also have an upper bound on $\Var(f')$ given by
+\begin{equation*}
+ \oV_j  := \min_{k=1, \ldots, j} \fC\left(\frac{2(b-a)}{n_k}\right)\tV_{n_k}(f), \qquad j \in \naturals.
+\end{equation*}
+Thus, a necessary condition for $f \in \cc$ is that $\tV_{n_j}(f) \le \oV_j$ for $j \in \naturals$.
+
+The upper bound on $\Var(f')$ can be combined with the error bound in \eqref{traperrbd} to provide a data-based upper bound on the trapezoidal rule error:
+\begin{equation} \label{guarerr}
+\err(f,n_j) \le \oerr(f,n_j) = \frac{(b-a)^2 \Var(f')}{8 n_j^2} \le  \frac{(b-a)^2 \oV_j}{8 n_j^2}:=\varepsilon_{n_j} .
+\end{equation}
+This is the crux of their guaranteed adaptive trapezoidal rule, $\relinteg$ \cite{Fred}, which is guaranteed to find an answer within the error tolerance for integrands in $\cc$. For the absolute error criterion, $\relinteg$ increases $n$ until $\varepsilon_{n_j} \le \abstol $. 
+
+\Section{Guaranteed, Adaptive Trapezoidal Algorithm for a Hybrid Error Tolerance $\newinteg$}\label{newAlgorithm}
+
+For relative error, the situation is more complicated because there is $I(f)$ in the tolerance term. So we need to find a way to bound or estimate $I(f)$. Enlightened by the general error criterion in \cite{rel}, we can extend $\relinteg$ to meet more general error criterion. 
+
+\textbf{Algorithm }$\newinteg$ Given an interval, $[a,b]$, an inflation function, $\fC$, a positive key mesh size, $\hcut$, a positive error tolerance, $\abstol$, a relative error tolerance. $\reltol$, and a routine for generating values of the integrand, $f$, set $j=1$, $n_1 = \left \lfloor 2(b-a)/\hcut \right \rfloor +1$, and $\oV_0=\infty$.
+\begin{description}
+\item[Step 1] Compute $\tV_{n_j}(f)$ and $\displaystyle \oV_j = \min\left(\oV_{j-1}, \fC\left(\frac{2(b-a)}{n_j}\right)\tV_{n_j}(f) \right )$. If it happens that $\tV_{n_j}(f) >  \oV_{j}$, then re-define $\hcut$ and $\fC$ so that $\tV_{n_k}(f) \le   \oV_{k}$ for $k=1, \ldots, j$. Otherwise, proceed.
+
+\item [Step 2] Compute $T_{n_j},\varepsilon_{n_j}=\frac{(b-a)^2 \oV_j}{8 n_j^2}$, check $\Delta_{n_j}\ge \varepsilon_{n_j}$, where
+\begin{equation}\label{definDelta}
+\Delta_{n_j}=\frac{1}{2}[\max(\varepsilon_{a},\varepsilon_{r}|T_{n_j}+\varepsilon_{n_j}|)+\max(\varepsilon_{a},\varepsilon_{r}|T_{n_j}-\varepsilon_{n_j}|)].
+\end{equation}
+If satisfies, then return 
+\begin{align}\label{appdef}
+\hat{I}(f)=\frac{(T_{n_j}-\varepsilon_{n_j}) \max ( \abstol,\reltol \abs{T_{n_j}+\varepsilon_{n_j}})+(T_{n_j} + \varepsilon_{n_j} ) \max{(\abstol, \reltol\abs{T_{n_j}-\varepsilon_{n_j}})}}{\max ( \abstol,\reltol \abs{T_{n_j}+\varepsilon_{n_j}})+\max{(\abstol, \reltol\abs{T_{n_j}-\varepsilon_{n_j}})}}
+\end{align}
+as the answer.  
+
+\item [Step 3] Otherwise, increase the number of trapezoids to $n_{j+1} = 2 n_j$, and go to Step 1.
+
+\end{description}
+Although in practice we may be unable to be sure that our particular integrand is in the cone  $\cc$, Step 1 does check a necessary condition.  We expect the default values of $\fC$ and $\hcut$ to be chosen such that this check fails only rarely in practice. In Step 2, instead of checking $\varepsilon_{n_j}$ is less than absolute error tolerance, we introduce a new item $\Delta_{n_j}$ to make the $\newinteg$ to satisfy a hybrid error criterion.
+
+Next, we want to show that algorithm $\newinteg$ is successful.
+\begin{theorem}
+ $T_{n_j}$ is the result of trapezoidal rule that satisfy the error bound $|I(f)-T_{n_j}|\leq \varepsilon_{n_j}$, and the approximation $\hat{I}(f)$ is defined as \eqref{appdef}. If the integrand is in the cone  $\cc$, and $\varepsilon_{n_j}$ satisfies
+\begin{align}
+\label{upperbound}
+\varepsilon_{n_j} \leq \Delta_{n_j}
+\end{align}
+then the algorithm $\newinteg$ is successful, i.e.,
+\begin{align*}
+\abs{I(f) - \hat{I}(f)} \le \max \big( \abstol,\reltol  \abs{I(f)} \big),\forall f \in \cc, \ 0 < \abstol,\ 0 \le \reltol \le 1. 
+\end{align*}
+\end{theorem}
+
+\begin{proof}
+
+Since $\abs{I(f)-T_{n_j}(f)} \le \oerr(f,n_j) \le \varepsilon_{n_j}$, we are certain that $ I(f) \in [T_{n_j}-\varepsilon_{n_j}, T_{n_j}+\varepsilon_{n_j}]$. 
+Let $\Delta_-=\frac{1}{2}\big(\max(\abstol, \reltol\abs{T_{n_j}-\varepsilon_{n_j}})-\max(\abstol, \reltol\abs{T_{n_j}+\varepsilon_{n_j}})\big)$, then from \eqref{appdef} and triangle inequality, we have
+\begin{align*}
+\hat{I}(f) &\big(\max ( \abstol,\reltol \abs{T_{n_j}+\varepsilon_{n_j}})+ \max{(\abstol, \reltol\abs{T_{n_j}-\varepsilon_{n_j}})}\big) =\\
+& (T_{n_j}-\varepsilon_{n_j}) \max ( \abstol,\reltol \abs{T_{n_j}+\varepsilon_{n_j}})+(T_{n_j} + \varepsilon_{n_j} ) \max{(\abstol, \reltol\abs{T_{n_j}-\varepsilon_{n_j}})}\\
+\Rightarrow & 2 \hat{I}(f) \Delta_{n_j} = 2 T_{n_j} \Delta_{n_j}+ \varepsilon_{n_j}\big( \max(\abstol, \reltol\abs{T_{n_j}-\varepsilon_{n_j}})-\max(\abstol, \reltol\abs{T_{n_j}+\varepsilon_{n_j}}) \big)\\
+\Rightarrow & 2 T_{n_j}+2 \varepsilon_{n_j} \Delta_- = 2 \hat{I}(f) \Delta_{n_j} \le 2 T_{n_j} \Delta_{n_j}+\Delta_{n_j} \big( \max(\abstol, \reltol\abs{T_{n_j}-\varepsilon_{n_j}})-\max(\abstol, \reltol\abs{T_{n_j}+\varepsilon_{n_j}}) \big) \text{by \eqref{upperbound}}\\
+\Rightarrow & T_{n_j}+\varepsilon_{n_j} \frac{\Delta_-}{\Delta_{n_j}} = \hat{I}(f) \le T_{n_j}-\max(\abstol, \reltol\abs{T_{n_j}+\varepsilon_{n_j}})+\max(\abstol, \reltol\abs{T_{n_j}-\varepsilon_{n_j}})\\
+& \frac{\Delta_-}{\Delta_{n_j}}= \varepsilon_{n_j}+\frac{-2 \max(\abstol,\reltol \abs{T_{n_j}+\varepsilon_{n_j}})}{\max(\abstol, \reltol\abs{T_{n_j}+\varepsilon_{n_j}})+\max(\abstol, \reltol\abs{T_{n_j}-\varepsilon_{n_j}})}\\
+\Rightarrow &  T_{n_j}+\varepsilon_{n_j}-\frac{2\max(\abstol,\reltol\abs{I(f)})}{2}\le \hat{I}(f) \le T_{n_j}-\varepsilon_{n_j}+\max(\abstol, \reltol\abs{T_{n_j}-\varepsilon_{n_j}})\\
+\Rightarrow & I(f)-\max(\abstol,\reltol \abs{I(f)})\le\hat{I(f)} \le I(f)+ \max(\abstol,\reltol\abs{I(f)})\\
+&\text{since } \alpha-\max(\varepsilon_{a},\varepsilon_{r}|\alpha|) \text{ increase as } \alpha \text{ increases.}\\
+\Leftrightarrow & \abs{I(f)-\hat{I}(f)} \le \max(\abstol,\reltol \abs{I(f)})
+\end{align*}
+Then we prove algorithm $\newinteg$ is successful.
+\end{proof}
+
+
+
+
+\Chapter{Computational Cost}
+
+In addition to knowing when $\newinteg$ is successful, we want to understand its computational cost.
+
+\begin{theorem} \label{costthm}
+Let $N(f,\varepsilon_{a},\varepsilon_{r})$ denote the final number of trapezoids that is required by $\newinteg(f,a,b,\varepsilon)$.  Then this number is bounded below and above in terms of the true, yet unknown, $\Var(f')$ and $I(f)$.
+\begin{multline} \label{integcostbd}
+\max\left(\left\lfloor\frac{2(b-a)}{\hcut}\right\rfloor+1,\left\lceil(b-a)\sqrt{\frac{\Var(f^{'})(1-\varepsilon_{r})}{8\max(\varepsilon_{r}|I|,\varepsilon_{a})}}\right\rceil\right)\le N(f,\abstol,\reltol) \\
+\leq 2\min\left\{n \in \naturals: n\ge \left\lfloor\frac{2(b-a)}{\hcut}\right\rfloor+1, \frac{n^{2}}{\fC(\frac{2(b-a)}{n})} \leq \frac{(b-a)^{2}(1+\varepsilon_{r})\Var(f^{'})}{8\max(\varepsilon_{r}|I|,\varepsilon_{a})}\right\}
+\end{multline}
+The number of function values required by $\newinteg(f,a,b,\varepsilon_{a},\varepsilon_{r})$ is $N(f,\varepsilon_{a},\varepsilon_{r})+1$.
+\end{theorem}
+
+\begin{proof} Let $n$ be the value of $n_j$ when the algorithm terminates. No matter what inputs $f$ and $\varepsilon_{a},\varepsilon_{r}$ are provided, the number of trapezoids must be at least $n_1 = \left \lfloor 2(b-a)/\hcut \right \rfloor +1$.  Then the number of trapezoids is increased until $\varepsilon_{n_j}  \le \Delta_{n_j}$. We will have lower bound on $N(f,\varepsilon_{a},\varepsilon_r)$ based on it.
+
+Consider the possibility that  $|T_{n}| \le \varepsilon_{n}$ and $\varepsilon_{a} < \varepsilon_{r}(\varepsilon_{n}-|T_{n}|)$. Then 
+$$\varepsilon_{n} \leq \Delta_{n}=\frac{1}{2}[\varepsilon_{r}(|T_{n}|+\varepsilon_{n})+\varepsilon_{r}(\varepsilon_{n}-|T_{n}|)]=\varepsilon_{r}\varepsilon_n <\varepsilon_n,
+$$since $0\leq\varepsilon_{r}<1$. This is a contradiction, so this situation is impossible.
+Thus we must have $|T_{n}| > \varepsilon_{n}$ or $\varepsilon_{a} \geq \varepsilon_{r}\abs{ |T_{n}|-\varepsilon_{n}},$
+\begin{align*}
+\Delta_{n}&=\frac{1}{2}[\max(\varepsilon_{a},\varepsilon_{r}(|T_{n}|+\varepsilon_{n}))+\max(\varepsilon_{a},\varepsilon_{r}(|T_{n}|-\varepsilon_{n}))]
+\\&\leq \frac{1}{2}[\max(\varepsilon_{a},\varepsilon_{r}(|I(f)|+2\varepsilon_{n})+\max(\varepsilon_{a},\varepsilon_{r}|I(f)|)]
+\\&\leq \frac{1}{2}[2\max(\varepsilon_{a},\varepsilon_{r}|I(f)|)+2\varepsilon_{r}\varepsilon_{n}]    
+\\&=\max(\varepsilon_{a},\varepsilon_{r}|I(f)|)+\varepsilon_{r}\varepsilon_{n}.
+\end{align*}
+Moreover,
+\begin{equation}\label{uneven}
+|T_{n}|-\varepsilon_{n}\leq |T_{n}|-|I(f)-T_{n}|\leq|I(f)|=|I(f)-T_{n}+T_{n}
+\leq|I(f)-T_{n}|\leq\varepsilon_{n}+|T_{n}|.
+\end{equation}
+Therefore, we have 
+\begin{align*}
+\varepsilon_{n}&\leq \Delta_{n} \le \max(\varepsilon_{a},\varepsilon_{r}|I(f)|)+\varepsilon_{r}\varepsilon_{n}\\
+\frac{(b-a)^{2}\Var(f^{'})}{8n^{2}}&\leq\frac{(b-a)^{2}\displaystyle \oV_j}{8n^{2}}=\varepsilon_{n_j}\leq\frac{\max(\varepsilon_{a},\varepsilon_{r}|I|)}{1-\varepsilon_{r}}
+\\(b-a)&\sqrt{\frac{\Var(f^{'})(1-\varepsilon_{r})}{8\max(\varepsilon_{r}|I(f)|,\varepsilon_{a})}}\leq n=N(f,\varepsilon_{r},\varepsilon_{a})
+\end{align*}
+which completes the proof of the lower bound on $n$.
+
+
+Next, we prove the upper bound on the computational cost. Let $\tilde{n}=n/2$, where $n$ is the value of $n_j$ for which Algorithm $\newinteg$ terminates.  Since $n_1$ satisfies the upper bound, we may assume that $\tilde{n}$ exists. Note that $\varepsilon_{\tilde{n}}=\frac{(b-a)^{2}\displaystyle\oV_{\tilde{n}}}{8\tilde{n}^{2}}>\Delta_n$.
+Since 
+\begin{align*}
+\varepsilon_{\tilde{n}}& >\Delta_{\tilde{n}}=\frac{1}{2}[\max(\varepsilon_{a},\varepsilon_{r}(|T_{\tilde{n}}|+\varepsilon_{\tilde{n}}))+\max(\varepsilon_{a},\varepsilon_{r}(|T_{\tilde{n}}|-\varepsilon_{\tilde{n}})]\\
+&\geq\frac{1}{2}[\max(\varepsilon_{a},\varepsilon_{r}(|T_{\tilde{n}}+\varepsilon_{\tilde{n}}|)+\max(\varepsilon_{a},\varepsilon_{r}(|T_{\tilde{n}}|-\varepsilon_{\tilde{n}}))]\\
+&\geq\frac{1}{2}[\max(\varepsilon_{a},\varepsilon_{r}|I(f)|)+\max(\varepsilon_{a},\varepsilon_{r}(|I(f)|-2\varepsilon_{\tilde{n}}))]   \text{\  by } \eqref{uneven}\\
+&\geq \frac{1}{2}[2\max(\varepsilon_{a},\varepsilon_{r}|I(f)|)-2\varepsilon_{r}\varepsilon_{\tilde{n}}]\\
+&=\max(\varepsilon_{a},\varepsilon_{r}|I(f)|)-\varepsilon_{r}\varepsilon_{\tilde{n}}
+\end{align*} 
+Therefore, we have 
+\begin{align}\label{equ}
+\begin{split}
+&\varepsilon_{\tilde{n}}>\frac{\max(\varepsilon_{a},\varepsilon_{r}|I(f)|)}{1+\varepsilon_{r}} 
+\text{ and } \varepsilon_{\tilde{n}}=\frac{(b-a)^{2}\displaystyle\oV_{\tilde{n}}}{8\tilde{n}^{2}},\\
+&\text{so  } \tilde{n}^{2}<\frac{(b-a)^{2}\displaystyle\oV_{\tilde{n}}(1+\varepsilon_{r})}{8\max(\varepsilon_{a},\varepsilon_{r}|I(f)|)}\leq\min_{k=1, \ldots, j} \fC\left(\frac{2(b-a)}{n_k}\right)\Var(f^{'})\leq\fC\left(\frac{2(b-a)}{n}\right)\Var(f^{'})\\
+&\Rightarrow \frac{\tilde{n}^{2}}{\fC\left(\frac{2(b-a)}{\tilde{n}}\right)}<\frac{(b-a)^{2}(1+\varepsilon_{r})\Var(f^{'})}{8\max(\varepsilon_{r}|I(f)|,\varepsilon_{a})}
+\end{split}
+\end{align}
+Recall $n=2\tilde{n}, N(f,\varepsilon_a,\varepsilon_r)=n=2\tilde{n}$. Pluging it into \eqref{equ} completes the proof of the upper bound on the computational cost.
+\end{proof}
+
+
+
+
+
+\Chapter{Complexity}
+
+Not only is it important to understand the maximum possible computational cost of $\newinteg$, but it is also desirable to know whether this cost is optimal among all possible algorithms utilizing function values.
+
+\begin{theorem} \label{conealgolowbdthm}
+Let $\goodinteg$ be any (possibly adaptive) algorithm that succeeds for all integrands in $\cc$, and only uses function values.  For any error tolerance $\abstol \ge 0, \abstol\reltol>0 $ and any arbitrary value of $\Var(f')$, there will be some $f \in \cc$ for which $\goodinteg$ must use at least 
+\begin{equation} \label{lowbdcone}
+\min\left\{(b-a){\sqrt{\frac{\var(f')}{4\max(\varepsilon_{a},\varepsilon_{r}|I|)}}},\frac{(b-a-3\hcut)g\left(\frac{\var(f')}{4\max(\varepsilon_{a},\varepsilon_{r}|\mu|)}\right)-3}{2}\right\}
+\end{equation}
+function values and $g(x)=\min\left\{y \in[\frac{1}{\delta\hcut},\infty):\frac{\fC(1/y)y^2}{\fC(1/y)-1}\ge x\right\}$.
+\end{theorem}
+
+\begin{proof}
+Defind the double peaked function which always lies in $\cc$:
+\begin{multline}\label{twopkdef}
+\twopk(x;t,h,\pm):= \tri(x,0,\hcut) \pm \frac{3[\fC(h)-1]}{4}\tri(x,t,h), \\
+ \qquad \qquad a+3\hcut \le t \le b-3h, \ 0\le h < \hcut,
+\end{multline}
+\begin{align}\label{value}
+&\Var(\twopk'(x;t,h,\pm)) = 3 +  \frac{3[\fC(h)-1]}{4} \times 4 = 3 \fC(h).\\
+&\int_a^b \twopk(x;t,h,\pm)  \, \dif x = \frac{\hcut^2}{2} \pm \frac{3[\fC(h)-1]h^2}{8}
+\end{align}
+
+
+\begin{figure}
+ \centering
+ \includegraphics[width=150mm,scale=0.5]{peak}
+ \caption{(a)single peak function as defined in \eqref{trifundef}, (b)double-peak function as defined in \eqref{twopkdef}}   
+\end{figure}
+
+For any $\beta$ and any positive $\alpha$, suppose that $\goodinteg(\cdot,a,b,\varepsilon_{a},\varepsilon_{r})$ 
+evaluates the triangle peak shaped integrand $\beta+\alpha \tri(\cdot;0,\hcut)$ at $n$ nodes before returning an answer. Let $\{x_{i}\}_{i=1}^{m}$ be the $m\le n$ ordered nodes used by $\goodinteg(\beta+\alpha \tri(\cdot;a,\hcut),a,b,\varepsilon_{a},\varepsilon_{r})$ that fall in the interval $(x_{0},x_{m+1})$, where $x_{0}:=a+3\hcut, x_{m+1}:=b-h$, and $ h:=\min\left(\delta\hcut,[b-a-3\hcut]/(2n+3)\right),0<\delta<1$. There must be at least one  of these $x_{i}$ with $i=1,...,m$ for which
+$$\frac{x_{i+1}-x_{i}}{2} \ge \frac{x_{m+1}-x_{0}}{2(m+1)} \ge \frac{x_{m+1}-x_{0}}{2n+2}=\frac{b-a-3\hcut-h}{2n+2}=\frac{b-a-3\hcut}{2n+3}\ge h.$$
+Choose such $x_{i}$, and call it $t$. The choice of $t$ and $h$ ensure that $\goodinteg(\cdot,a,b,\varepsilon_{a},\varepsilon_{r})$ cannot distinguish between $\beta+\alpha \twopk(\cdot;t,h,\pm)$ and $\beta+\alpha \tri(\cdot;0,\hcut)$ which are defined as . Thus,
+$$\goodinteg(\beta+\alpha \twopk(\cdot;t,h,\pm),a,b,\varepsilon_{a},\varepsilon_{r})= \goodinteg(\beta+\alpha \tri(\cdot;0,\hcut),a,b,\varepsilon_{a},\varepsilon_{r}).$$
+Note that \\ 
+$I(\beta+\alpha \twopk(\cdot;t,h,+))>I(\beta+\alpha \tri(\cdot;0,\hcut))>I(\beta+\alpha \twopk(\cdot;t,h,-)),$\\ 
+and
+$$\displaystyle\oV_{j}(\beta+\alpha \twopk(\cdot;t,h,+))=\displaystyle\oV_{j}(\beta+\alpha \tri(\cdot;0,\hcut))=\displaystyle\oV_{j}(\beta+\alpha \twopk(\cdot;t,h,-)).$$
+
+Then due to triangle inequality we have:
+\begin{align*}
+\max \big(&\varepsilon_{a}, \varepsilon_{r}\abs{I(\beta+\alpha \tri(\cdot;0,\hcut))} \big)\\
+&\ge \frac{1}{2}\left[\max \big( \varepsilon_a,\varepsilon_r\abs{I(\beta+\alpha \twopk(\cdot;t,h,-))} \big)+\max \big( \varepsilon_a,\varepsilon_r\abs{I(\beta+\alpha \twopk(\cdot;t,h,+))} \big)\right]\\
+&\ge\frac{1}{2}\bigg[\bigg|\int_{a}^{b}\beta+\alpha \twopk(x;t,h,-)dx-\goodinteg(\beta+\alpha \twopk(\cdot;t,h,-),a,b,\varepsilon_{a},\varepsilon_{r})\bigg|\\
+&+\bigg|\int_{a}^{b} \beta+\alpha \twopk(x;t,h,+)dx-\goodinteg(\beta+\alpha \twopk(\cdot;t,h,+),a,b,\varepsilon_{a},\varepsilon_{r})\bigg|\bigg]\\
+& \ge \frac{1}{2}\bigg[\bigg|\goodinteg(\beta+\alpha \tri(\cdot;0,\hcut),a,b,\varepsilon_{a},\varepsilon_{r})-\int_{a}^{b}\beta+\alpha \twopk(x;t,h,-)dx\bigg|\\
+& +\bigg|\int_{a}^{b} \beta+\alpha \twopk(x;t,h,+)dx-\goodinteg(\beta+\alpha \tri(\cdot;0,\hcut),a,b,\varepsilon_{a},\varepsilon_{r})\bigg|\bigg]\\
+& \ge \frac{1}{2}\bigg|\int_{a}^{b} \beta+\alpha \twopk(x;t,h,+)dx-\int_{a}^{b}\beta+\alpha \twopk(x;t,h,-)dx\bigg|\\
+& =\int_{a}^{b}\frac{3\alpha[\fC(h)-1]}{4}\tri(x;t,h)dx,
+\end{align*}
+by \eqref{value}, it equals:
+\begin{align*}
+\frac{3\alpha[\fC(h)-1]h^{2}}{4} & =\frac{3\alpha[\fC(h)-1]h^{2}}{4}\cdot\frac{\Var(\alpha\twopk^{'}(\cdot;t,h.+))}{3\alpha\fC(h)}\\
+&=\big[\frac{\fC(h)-1}{\fC(h)}\big]\frac{h^{2}\Var(\alpha\twopk^{'}(\cdot;t,h.+))}{4}
+\end{align*} 
+Then it follows 
+\begin{align}\label{tem}
+\frac{\fC(h)}{(\fC(h)-1)h^{2}}\ge \frac{\Var(\alpha\twopk^{'}(\cdot;t,h.+))}{4\max(\varepsilon_{a},\varepsilon_{r}|I(\beta+\alpha \twopk(\cdot;t,h,+))|)}
+\end{align}
+Let $\mu_+=I(\beta+\alpha \twopk(\cdot;t,h,+))$ and $\sigma=\Var(\alpha\twopk^{'}(\cdot;t,h.+))$,
+so \eqref{tem} becomes  $\frac{\sigma}{4\max(\varepsilon_{a},\varepsilon_{r}|\mu_+|)}$. Then let $g(x)=\min\left\{y \in[\frac{1}{\delta\hcut},\infty):\frac{\fC(1/y)y^2}{\fC(1/y)-1}\ge x\right\}$,we have
+\begin{align*}
+&\frac{1}{h}\ge g\left(\frac{\sigma}{4\max(\varepsilon_{a},\varepsilon_{r}|\mu_+|)}\right) \ge \frac{1}{\delta\hcut}\\
+\Rightarrow& h\le \frac{1}{g\left(\frac{\sigma}{4\max(\varepsilon_{a},\varepsilon_{r}|\mu_+|)}\right)}\le \delta\hcut\\
+\Rightarrow &\min\left(\delta\hcut,\frac{b-a-3\hcut}{2n+3}\right)\le \frac{1}{g\left(\frac{\sigma}{4\max(\varepsilon_{a},\varepsilon_{r}|\mu_+|)}\right)}\le \delta\hcut\\
+\Rightarrow&\max\left(\frac{1}{\delta\hcut},\frac{2n+3}{b-a-3\hcut}\right)\ge g\left(\frac{\sigma}{4\max(\varepsilon_{a},\varepsilon_{r}|\mu_+|)}\right)\ge \frac{1}{\delta\hcut}\\
+\Rightarrow&\frac{2n+3}{b-a-3\hcut}\ge g\left(\frac{\sigma}{4\max(\varepsilon_{a},\varepsilon_{r}|\mu_+|)}\right)\\
+& \text{or } g\left(\frac{\sigma}{4\max(\varepsilon_{a},\varepsilon_{r}|\mu_+|)}\right)=\delta\hcut\\
+\Rightarrow &2n+3\ge (b-a-3\hcut)g\left(\frac{\sigma}{4\max(\varepsilon_{a},\varepsilon_{r}|\mu_+|)}\right) \\
+&\text{ or }\frac{\fC(\hcut)}{\hcut^2(\fC(\hcut)-1)}=\frac{\sigma}{4\max(\varepsilon_{a},\varepsilon_{r}|\mu_+|)}
+\end{align*}
+Since $ \hcut\ge \frac{b-a}{n}$, then
+\begin{align*}
+&n \ge \frac{(b-a-3\hcut)g\left(\frac{\sigma}{4\max(\varepsilon_{a},\varepsilon_{r}|\mu_+|)}\right)-3}{2}\\
+\text{or }& n \ge(b-a){\sqrt{\frac{(\fC(\hcut)-1)\sigma}{4\fC(\hcut)\max(\varepsilon_{a},\varepsilon_{r}|\mu_+|)}}}\ge (b-a){\sqrt{\frac{\sigma}{4\max(\varepsilon_{a},\varepsilon_{r}|\mu_+|)}}}
+\end{align*}
+Since $\alpha,\beta$ are arbitrary number, the value of $\sigma,\mu$ are arbitrary as well. `
+\end{proof}
+
+\Chapter{Numerical Test}
+
+L. E. Shampine give some examples integration for test numerical algorithms in \cite{LFS}. Our  new algorithm $\newinteg$ has been implemented into GAIL \cite{GAIL} and tested with two functions in \cite{LFS}. Then compare the results with function integral in MATLAB.
+
+The first test function is a fuction family has an oscillatory integrand
+\begin{align*}
+\int_{0}^{1} 1+\cos(a \pi x) dx
+\end{align*}
+which we solve for 50 values of $a$ randomly generated from $\frac{1}{3}$ to $83+\frac{1}{3}$ following uniform distribution. The absolute error $\abstol$ is set up from  $10^{-1}$, up to $10^{-9}$, and $\reltol$ is hold at $5 \times 10^{-5}$.
+
+The result are shown in Table \ref{result}, where the MATLAB means the integral algorithm in MATLAB and $\newinteg$ means our algorithm.
+
+\begin{table}[h]\label{result}
+ \caption {Success rate of the oscillatory integrand} % title of the table
+ \centering                          % centering table
+ \begin{tabular}{cccccccccc}          % creating eight columns
+ \hline\hline                      % inserting Three-line
+  $\abstol$ & $10^{-1}$ & $10^{-2}$ & $10^{-3}$ & $10^{-4}$ & $10^{-5}$ & $10^{-6}$ & $10^{-7}$ & $10^{8}$ & $10^{-9}$ \\ [0.5ex]
+ \hline                                      % inserts single-line
+\texttt{integral}  & 50 & 50 & 50 & 50 & 50 & 50 & 50& 50 & 50 \\[1ex] % [1ex] adds vertical space
+ \hline   
+ $\newinteg$ & 50 & 50 & 50 & 50 & 50 & 50 & 50& 50 & 50   \\[1ex] % [1ex] adds vertical space
+ \hline                                 % inserts single-line
+ \end{tabular}
+ \end{table}
+
+From the test result, we can see our $\newinteg$ works as well as the Integral in MATLAB, which is based on Gaussian quadrature. We expect it will have better performance than our $\newinteg$ since it is a higher order method. It turned out up to $ 10^{-9}$ tolerance, they both succeed and no failures. 
+
+Next, we try another family of problems involving a parameter, 
+\begin{align*}
+\int_{0}^{1} \abs{x-\alpha}+\abs {x-(\alpha+h)} dx,
+\end{align*}
+where $\alpha$ is uniform random number from $h$ to $1-h$. This famly of functions have a big flat part. We want to see these two quadrature can catch it. In this test the absolute error $\varepsilon_{a}$ is held fixed at $10^{-6}$, and relative error $\varepsilon_{r}$ is set to $5 \times 10^{-6}$. 
+
+\begin{table}[h]
+ \caption{Tests Result of Function with a Flat Line} % title of the table
+ \centering                          % centering table
+ \begin{tabular}{cccccccccc}          % creating eight columns
+ \hline\hline                        % inserting Three-line
+ \ &  $h=0.1$ \ & & $h=0.01$ \ & &\\
+ \hline
+ \ &  succeess rate & failure rate  &  succeess rate & failure rate                                   \\ 
+ \hline % inserts single-line
+\texttt{Integral}  & 95\% & 5\% & 92\% & 8\% \\[1ex] % [1ex] adds vertical space
+ \hline   
+ $\newinteg$  & 100\% & 0\% & 100\% & 0\% \\[1ex] % [1ex] adds vertical space
+ \hline                                 % inserts single-line
+ \end{tabular}
+ \label{table:h}
+ \end{table}
+ 
+From Table \ref{table:h}, the failure rate of the \texttt{Integral} in MATLAB is 5 \% . On the other hand, our algorithm has 0 \% failure rate. Since $h$ is about 8\% of the interval, missing it is not a small error to the final answer. Moreover, when h gets smaller, there is more chance \texttt{Integral} miss the flat part. The failure rate increases to 8\% when $h$ is 0.01. While our algorithm is still guaranteed to provide a numerical approximation to the true integral with an error no greater than tolerance.
+
+
+\Chapter{CONCLUSION}
+
+Numerical computation is an important part of mathrmastics because it provides us answers when analytic methods cannot. Trapezoidal rule works for evaluationg integrals that do exist, but whose values cannot be expressed in terms of analytic functions. In addition to that, error bounds of the form 
+\begin{align*}
+\err(f,n):=\norm{S(f)-A_n(f)} \le C(n) \norm{f}
+\end{align*}
+already exist, where $S$ denotes the solution operator (integration in our case), $A_n$ denotes the numerical method ($T_n$ in our case),  $\norm{f}$ denotes some semi-norm of the input element $f$ ($\Var(f')$ in our case), $C$ is some known function, and $n$ corresponds to the number of steps or nodes. 
+
+In \cite{Fred}, they solve the problem "How large must $n$ be to ensure that error, $\err(f,n)$  is no greater than the tolerance, $\varepsilon_a$?'' Instead of telling our calculators and computer languages how to choose $n$, the number of terms in a polynomial approximation.  That number is chosen invisibly and large enough so that the error is negligible compared to machine accuracy.  Theory guarantees that these algorithms work. Now we extend this algorithm to satisfy a more general error criteria.
+
+As demonstrated in Chapter 2, it is now possible to set relative error criteria or hybrid error criteria. Rather than pretend that all realistic problems have upper bound on $\Var (f')$, we can solve it by our adaptive quadrature algorithms.
+
+There are several problems we want to work in the future. Now the algorithm is global adaptive, which means all the nodes are chosen equally spaced. It will be more efficient if local adaptive. More nodes on the spiky part and less on the plat line. Moreover, extend this idea to more more powerful algorithms. Instead of Trapezoidal rule, we can use higher order quadrature methods for better guaranteed algorithms.
+
+
+
+% Do the settings of appendices with \appendix command
+\appendix
+
+% Then create each appendix using
+% \Appendix{title_of_appendix} command
+
+\Appendix{Matlab Code}
+
+\small
+
+\begin{lstlisting}[language=Matlab] 
+function [q,out_param] = integralNoPenalty1_g(varargin)
+%INTEGRAL_G 1-D guaranteed function integration using trapezoidal rule
+%
+%   q = INTEGRAL_G(f) computes q, the definite integral of function f
+%   on the interval [a,b] by trapezoidal rule with 
+%   in a guaranteed absolute error of 1e-6. Default starting number of
+%   sample points taken is 100 and default cost budget is 1e7. Input f is a 
+%   function handle. The function y = f(x) should accept a vector argument 
+%   x and return a vector result y, the integrand evaluated at each element
+%   of x.
+%
+%   q = INTEGRAL_G(f,a,b,abstol) computes q, the definite
+%   integral of function f on the finite interval [a,b] by trapezoidal rule
+%   with the ordered input parameters, and guaranteed absolute error tolerance
+%   abstol.
+%
+%   q = INTEGRAL_G(f,'a',a,'b',b,'abstol',abstol)
+%   computes q, the definite integral of function f on the finite interval
+%   [a,b] by trapezoidal rule within a guaranteed absolute error tolerance
+%   abstol.
+%   All four field-value pairs are optional and can be supplied.
+%
+%   q = INTEGRAL_G(f,in_param) computes q, the definite integral of
+%   function f by trapezoidal rule within a guaranteed absolute error
+%   in_param.abstol. If a field is not specified, the default value is
+%   used.
+%
+%   [q, out_param] = INTEGRAL_G(f,...) returns the approximated 
+%   integration q and output structure out_param.
+%
+%   Input Arguments
+%
+%
+%     f --- input function
+%
+%     in_param.a --- left end of the integral, default value is 0
+%
+%     in_param.b --- right end of the integral, default value is 1
+%
+%     in_param.abstol --- guaranteed absolute error tolerance, default value
+%     is 1e-6
+%
+%     in_param.reltol --- relative error tolerance,default value is 5e-3
+%
+%  Opitional Input Arguments (Recommended not to change very often) 
+%
+%
+%     in_param.nlo --- lowest initial number of function values used, default
+%     value is 10
+%
+%     in_param.nhi --- highest initial number of function values used,
+%     default value is 1000
+%
+%     in_param.nmax --- cost budget (maximum number of function values),
+%     default value is 1e7
+%
+%     in_param.maxiter --- max number of iterations, default value is 1000
+% 
+%   Output Arguments
+%
+%     q --- approximated integral
+%
+%     out_param.f --- input function
+%
+%     out_param.a --- low end of the integral
+%
+%     out_param.b --- high end of the integral
+%
+%     out_param.abstol --- guaranteed absolute error tolerance
+%
+%     out_param.reltol --- relative error tolerance
+% 
+%     out_param.nlo --- lowest initial number of function values
+%
+%     out_param.nhi --- highest initial number of function values
+%
+%     out_param.nmax --- cost budget (maximum number of function values)
+%
+%     out_param.maxiter --- max number of iterations
+%
+%     out_param.ninit --- initial number of points we use, computed by nlo
+%     and nhi
+%
+%     out_param.exceedbudget --- it is true if the algorithm tries to use 
+%      more points than cost budget, false otherwise.
+% 
+%     out_param.tauchange --- it is true if the cone constant has been
+%     changed, false otherwise. See [1] for details. If true, you may wish to
+%     change the input in_param.ninit to a larger number.
+% 
+%     out_param.iter --- number of iterations
+%
+%     out_param.npoints --- number of points we need to 
+%     reach the guaranteed error tolerance.
+%
+%     out_param.errest --- approximation error defined as the differences
+%     between the true value and the approximated value of the integral.
+%
+%     out_param.nstar --- final value of the parameter defining the cone of
+%     functions for which this algorithm is guaranteed; nstar = ninit-2
+%     initially and is increased as necessary
+%
+
+% check parameter satisfy conditions or not
+[f,out_param, flip] = integral_g_param(varargin{:});
+
+%% main alg
+out_param.tau=ceil((out_param.ninit-1)*2-1); % computes the minimum number of points to start
+out_param.exceedbudget=false;   % if the number of points used in the calculation of q is less than cost budget
+out_param.conechange=false;  % if the cone constant has been changed
+ntrap=out_param.ninit-1; % number of trapezoids
+intervallen=out_param.b-out_param.a; % length of integration interval (>=0)
+Varfp=zeros(10,1); %initialize vector of approximations to Var(f')
+Varfpup=[inf; zeros(10,1)]; %initialize vector of upper bounds to Var(f')
+ii=1; %index
+
+if intervallen>0   
+    steplen=intervallen/ntrap; % length of subinterval
+    steplenvec=zeros(10,1); %vector to record subinterval lengths
+    hcut=2*intervallen/(ntrap-1); %minimum interval size
+    inflatelim=1.5;
+    xpts=(out_param.a:steplen:out_param.b)'; % generate ninit uniformly spaced points in [a,b]
+    fpts=f(xpts);   % get function values at xpts
+    sumf=(fpts(1)+fpts(out_param.ninit))/2+sum(fpts(2:ntrap)); % computes the sum of trapezoidal rule
+    while true
+        steplenvec(ii)=steplen;
+        
+        %Compute approximation to Var(f')
+        Varfp(ii)=sum(abs(diff(fpts,2)))/steplen; %approx Var(f')
+        Varfpup(ii+1)=min(Varfpup(ii),Varfp(ii)*inflatelim*hcut/(hcut-2*steplen));
+            %update upper bound on Var(f')       
+
+        %Check necessary condition for integrand to lie in cone
+        if Varfp(ii) > Varfpup(ii+1) %f lies outside cone
+            %Decrease hcut
+            tempa=1-inflatelim*Varfp(1:ii)/Varfp(ii);
+            whpos=find(tempa>0,1,'first');
+            hcut=min(steplenvec(whpos:ii)./tempa(whpos:ii));
+            out_param.conechange=true; %flag the changed tau
+            warning('GAIL:integralNoPenalty_g:spiky','This integrand is spiky relative to ninit. You may wish to increase ninit for similar integrands.');
+            
+            %Update Varfpup
+            Varfpup(whpos+1:ii+1)=min(Varfp(whpos:ii)*inflatelim*hcut/(hcut-2*steplenvec(whpos:ii)));
+        end
+        
+        %Check error
+        errest=Varfpup(ii+1)*(steplen.^2)/8;
+        t=sumf*steplen; %compute the integral
+        tminus=t-errest; 
+        tplus=t+errest;%compute extreme value
+        tol=(4*errest^2)/(max(out_param.abstol,out_param.reltol*abs(tplus))+max(out_param.abstol,out_param.reltol*abs(tminus)))^2;%tolerance function
+        
+        if tol <= 1 %tolerance is satisfied
+            q=(tminus*max(out_param.abstol,out_param.reltol*abs(tplus))+tplus*max(out_param.abstol,out_param.reltol*abs(tminus)))/...
+                (max(out_param.abstol,out_param.reltol*abs(tplus))+max(out_param.abstol,out_param.reltol*abs(tminus)));
+            %keyboard
+            break %exit while loop
+        else %need to increase number of trapezoids
+            %proposed inflation factor to increase ntrap by
+            inflation=2;
+        end
+        if ntrap*inflation+1 > out_param.nmax
+                %cost budget does not allow intended increase in ntrap
+            out_param.exceedbudget=true; %tried to exceed budget
+            warning('GAIL:integralNoPenalty_g:exceedbudget','integralNoPenalty_g attempts to exceed the cost budget. The answer may be unreliable.');
+            inflation=floor((out_param.nmax-1)/ntrap);
+                %max possible increase allowed by cost budget
+            if inflation == 1 %cannot increase ntrap at all
+                q=sumf*steplen; %compute the integral                 
+                break %exit while loop
+            end
+        end
+
+        %Increase number of sample points
+        steplen=steplen/inflation;
+        ntrapnew=ntrap*inflation;
+        xnew=bsxfun(@plus,(1:inflation-1)'*steplen,xpts(1:ntrap)'); %additional x values
+        ynew=f(xnew); %additional f(x) values
+        sumf=sumf+sum(ynew(:)); %updated weighted sum of function values
+        xpts = [reshape([xpts(1:ntrap)'; xnew],ntrapnew,1); xpts(ntrap+1)];
+        fpts = [reshape([fpts(1:ntrap)'; ynew],ntrapnew,1); fpts(ntrap+1)];
+        ntrap=ntrapnew; %new number of trapezoids
+        ii=ii+1; %increment the counter
+
+    end
+else
+    q = 0;
+    errest = 0;
+end
+if flip
+    q = -1*q;
+end
+out_param.npoints=ntrap+1;  % number of points finally used
+out_param.errest=tol;    % error of integral
+out_param.VarfpCI=[Varfp(ii) Varfpup(ii+1)];
+
+function [f, out_param, flip] = integral_g_param(varargin)
+% parse the input to the integralNoPenalty_g function
+
+% Default parameter values
+default.abstol  = 1e-6;
+default.reltol = 5e-3;
+default.nmax  = 1e7;
+default.nlo = 10;
+default.nhi = 1000;
+default.a = 0;
+default.b = 1;
+% if a<b, flip = 0; if a>b, flip = 1;
+flip = false;
+
+if isempty(varargin)
+    help integral_g
+    warning('GAIL:integralNoPenalty_g:nofunction','Function f must be specified. Now GAIL is giving you a toy example of f(x)=x^2.')
+    f = @(x) x.^2;
+    out_param.f=f;
+else
+  if gail.isfcn(varargin{1})
+    f = varargin{1};
+    out_param.f = f;
+  else
+    warning('GAIL:integralNoPenalty_g:notfunction','Function f must be a function handle. Now GAIL is giving you a toy example of f(x)=x^2.')
+    f = @(x) x.^2;
+    out_param.f = f;
+  end
+end;
+
+validvarargin=numel(varargin)>1;
+if validvarargin
+    in2=varargin{2};
+    validvarargin=(isnumeric(in2) || isstruct(in2) ...
+        || ischar(in2));
+end
+
+if ~validvarargin
+    %if only one input f, use all the default parameters
+    out_param.a = default.a;
+    out_param.b = default.b;
+    out_param.abstol = default.abstol;
+    out_param.reltol = default.reltol;
+    out_param.nlo = default.nlo;
+    out_param.nhi = default.nhi;    
+    out_param.nmax = default.nmax;
+else
+    p = inputParser;
+    addRequired(p,'f',@gail.isfcn);
+    if isnumeric(in2)%if there are multiple inputs with
+        %only numeric, they should be put in order.
+        addOptional(p,'a',default.a,@isnumeric);
+        addOptional(p,'b',default.b,@isnumeric);
+        addOptional(p,'abstol',default.abstol,@isnumeric);
+        addOptional(p,'reltol',default.reltol,@isnumeric);
+        addOptional(p,'nlo',default.nlo,@isnumeric);
+        addOptional(p,'nhi',default.nhi,@isnumeric);
+        addOptional(p,'nmax',default.nmax,@isnumeric);
+    else
+        if isstruct(in2) %parse input structure
+            p.StructExpand = true;
+            p.KeepUnmatched = true;
+        end
+        addParamValue(p,'a',default.a,@isnumeric);
+        addParamValue(p,'b',default.b,@isnumeric);
+        addParamValue(p,'abstol',default.abstol,@isnumeric);
+        addOptional(p,'reltol',default.reltol,@isnumeric);
+        addParamValue(p,'nlo',default.nlo,@isnumeric);
+        addParamValue(p,'nhi',default.nhi,@isnumeric);
+        addParamValue(p,'nmax',default.nmax,@isnumeric);
+    end
+    parse(p,f,varargin{2:end})
+    out_param = p.Results;
+end;
+
+if (out_param.a == inf||out_param.a == -inf||isnan(out_param.a)==1)
+    warning('GAIL:integralNoPenalty_g:anoinfinity',['a can not be infinity nor NaN. Use default a = ' num2str(default.a)])
+    out_param.a = default.a;
+end;
+if (out_param.b == inf||out_param.b == -inf||isnan(out_param.b)==1)
+    warning('GAIL:integralNoPenalty_g:bnoinfinity',['b can not be infinity not Nan. Use default b = ' num2str(default.b)])
+    out_param.b = default.b;
+end;
+if (out_param.b < out_param.a)
+    tmp = out_param.b;
+    out_param.b = out_param.a;
+    out_param.a = tmp;
+    flip=1;
+end
+
+% let error tolerance greater than 0
+if (out_param.abstol <= 0 )
+    warning('GAIL:integralNoPenalty_g:abstolnonpos',['Error tolerance should be greater than 0.' ...
+            ' Using default error tolerance ' num2str(default.abstol)])
+    out_param.abstol = default.abstol;
+end
+% let relative error between 0 and 1
+if (out_param.reltol < 0 )
+    warning('GAIL:integralNoPenalty_g:abstolnonpos',['Relative error tolerance should be between 0 and 1.' ...
+            ' Using default error tolerance ' num2str(default.reltol)])
+    out_param.reltol = default.reltol;
+end
+if (out_param.reltol >= 1 )
+    warning('GAIL:integralNoPenalty_g:abstolnonpos',['Relative error tolerance should be between 0 and 1.' ...
+            ' Using default error tolerance ' num2str(default.reltol)])
+    out_param.reltol = default.reltol;
+end
+
+    
+% let initial number of points be a positive integer
+if (~gail.isposint(out_param.nlo))
+    if isposge3(out_param.nlo)
+        warning('GAIL:integralNoPenalty_g:lowinitnotint',['Lowest initial number of points should be a positive integer.' ...
+            ' Using ', num2str(ceil(out_param.nlo))])
+        out_param.nlo = ceil(out_param.nlo);
+    else
+        warning('GAIL:integralNoPenalty_g:lowinitlt3',['Lowest initial number of points should be a positive integer.' ...
+            ' Using default number of points ' int2str(default.nlo)])
+        out_param.nlo = default.nlo;
+    end
+end
+if (~gail.isposint(out_param.nhi))
+    if isposge3(out_param.nhi)
+        warning('GAIL:integralNoPenalty_g:highinitnotint',['Highest initial number of points should be a positive integer.' ...
+            ' Using ', num2str(ceil(out_param.nhi))])
+        out_param.nhi = ceil(out_param.nhi);
+    else
+        warning('GAIL:integralNoPenalty_g:highinitlt3',['Highest initial number of points should be a positive integer.' ...
+            ' Using default number of points ' int2str(default.nhi)])
+        out_param.nhi = default.nhi;
+    end
+end
+if (out_param.nlo > out_param.nhi)
+    if isposge3(out_param.nhi)
+        warning('GAIL:integralNoPenalty_g:nlobtnhi',['Highest initial number of points should be at least equal to to lowest initial number of points.' ...
+            ' Using ', num2str(ceil(out_param.nhi)), ' as nlo'])
+        out_param.nlo = ceil(out_param.nhi);
+    else
+        warning('GAIL:integralNoPenalty_g:highinitlt3',['Highest initial number of points should be a positive integer.' ...
+            ' Using default number of points ' int2str(default.nhi)])
+        out_param.nhi = default.nhi;
+    end
+end
+
+out_param.ninit = max(ceil(out_param.nhi*(out_param.nlo/out_param.nhi)^(1/(1+(out_param.b-out_param.a)))),3);
+if (~gail.isposint(out_param.nmax))
+    if ispositive(out_param.nmax)
+        warning('GAIL:integralNoPenalty_g:budgetnotint',['Cost budget should be a positive integer.' ...
+            ' Using cost budget ', num2str(ceil(out_param.nmax))])
+        out_param.nmax = ceil(out_param.nmax);
+    else
+        warning('GAIL:integralNoPenalty_g:budgetisneg',['Cost budget should be a positive integer.' ...
+            ' Using default cost budget ' int2str(default.nmax)])
+        out_param.nmax = default.nmax;
+    end;
+end
+\end{lstlisting}
+
+\begin{thebibliography}{9}
+
+ 
+\bibitem{LFS} 
+Lawrence F. Shampine.
+\text{Vectorized adaptive quadrature in Matlab}.\\
+\textit{Journal of comptational and applied mathematics}. 211(2008)131-140, 2006.
+ 
+\bibitem{Fred} 
+Fred J.Hickernell, Martha Razo, Sunny Yun. Reliable Adaptive Numerical Itegration, 2015, Preprint
+
+\bibitem{rel}
+Fred J. Hickernell, Llu{\'\i}s Antoni Jim{\'e}nez Rugama, and Da Li. Adaptive Quasi-Monte Carlo Methods for Cubature.
+aeXiv:1702.01491v1, 2017
+
+\bibitem{Gauss} 
+Saulo P. Oliveira, Alexandre L. Madureira and Frederic Valentin.
+Weighted Quadrature Rules for Finite Element Methods. 
+\textit{Journal of comptational and applied mathematics}. May 2009, Pages 93-101
+
+\bibitem{none}
+Clancy. N., Y. Ding, C. Hamilton, F. J. Hickernell, and Y. Zhang. 2014. The cost of deterministic, adaptive, automatic algorithms:cones, not balls, \textit{J. Complexity 30}, Pages 21-45
+
+
+\bibitem{GAIL}
+Sou-Cheng T. Choi, Yuhan Ding, Fred J. Hickernell, Lan Jiang, Da Li, Jagadeeswaran Rathinavel, Lluis Antoni Jimenez Rugama, Xin Tong, Kan Zhang, Yizhi Zhang, and Xuan Zhou.  GAIL: Guaranteed Automatic Integration Library (Version 2.2), MATLAB Software, 2017.
+
+\bibitem{matlab}
+MATLAB version 8.4. Natick, Massachusetts: The MathWorks Inc., 2014.
+
+
+\end{thebibliography}
+
+
+
+\end{document}  % end of document
